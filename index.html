@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Goat Farm ROI - Advanced Model</title>
+<title>Goat Farm VC Model</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { font-family: Arial; margin: 25px; background:#f4f4f4; }
-.container { background:white; padding:20px; border-radius:10px; max-width:1000px; }
-input { width:120px; margin:4px; padding:5px; }
-label { display:inline-block; width:260px; }
-.section { margin-top:20px; padding:10px; background:#eef; border-radius:8px; }
+body { font-family: Arial; background:#f3f3f3; margin:20px; }
+.container { background:white; padding:20px; border-radius:10px; max-width:1200px; }
+.section { background:#eef; padding:12px; margin-top:15px; border-radius:8px; }
+input { width:120px; padding:5px; margin:4px; }
+label { display:inline-block; width:340px; }
 .card { background:#f9f9f9; padding:15px; margin-top:20px; border-radius:8px; }
 button { padding:10px 15px; cursor:pointer; }
+select { padding:5px; }
 </style>
 </head>
 
@@ -19,10 +20,19 @@ button { padding:10px 15px; cursor:pointer; }
 
 <div class="container">
 
-<h2>🐐 Goat Farm ROI - Trading + Breeding Model</h2>
+<h2>🐐 Goat Farm VC-Grade Investment Simulator</h2>
 
 <div class="section">
-<h3>🏗 Initial Investment</h3>
+<h3>📊 Scenario Selection</h3>
+<select id="scenario">
+<option value="0.8">🟥 Conservative (Low prices, high risk)</option>
+<option value="1.0" selected>🟨 Base Case (Normal market)</option>
+<option value="1.2">🟩 Aggressive (Eid + high demand)</option>
+</select>
+</div>
+
+<div class="section">
+<h3>🏗 Fixed Assets</h3>
 
 <label>Land Cost</label>
 <input id="land" value="1200000"><br>
@@ -30,32 +40,33 @@ button { padding:10px 15px; cursor:pointer; }
 <label>Development Cost</label>
 <input id="dev" value="2000000"><br>
 
-<label>Breeding Goat Cost (25 goats)</label>
-<input id="breedingCost" value="1000000"><br>
-
-<label>Trading Goat Starting Stock Value</label>
-<input id="tradingStock" value="500000"><br>
+<label>Breeding Goat Cost</label>
+<input id="breedCost" value="1000000"><br>
 </div>
 
-
 <div class="section">
-<h3>💸 Monthly Costs</h3>
+<h3>⚙ Operating Inputs</h3>
 
-<label>Employee Salary</label>
-<input id="employee" value="25000"><br>
+<label>Monthly Feed Cost</label>
+<input id="feed" value="60000"><br>
+
+<label>Employee</label>
+<input id="emp" value="25000"><br>
 
 <label>Petrol</label>
 <input id="petrol" value="60000"><br>
 
-<label>Feed & Maintenance</label>
-<input id="feed" value="60000"><br>
+<label>Mortality Rate %</label>
+<input id="mortality" value="10"><br>
+
+<label>Inflation % (annual)</label>
+<input id="inflation" value="12"><br>
 </div>
 
-
 <div class="section">
-<h3>📈 Trading Model</h3>
+<h3>📦 Trading Engine</h3>
 
-<label>Goats per Month</label>
+<label>Goats / Month</label>
 <input id="tradeCount" value="20"><br>
 
 <label>Buy Price</label>
@@ -65,24 +76,23 @@ button { padding:10px 15px; cursor:pointer; }
 <input id="sell" value="50000"><br>
 </div>
 
-
 <div class="section">
-<h3>🐐 Breeding Model</h3>
+<h3>🐐 Breeding Engine</h3>
 
-<label>Breeding Female Goats</label>
+<label>Female Goats</label>
 <input id="female" value="25"><br>
 
 <label>Kids per Female / Year</label>
 <input id="kids" value="2"><br>
 
-<label>Kid Selling Price</label>
+<label>Kid Price</label>
 <input id="kidPrice" value="30000"><br>
 </div>
 
 <br>
-<button onclick="calc()">Calculate ROI</button>
+<button onclick="run()">Run VC Model</button>
 
-<div class="card" id="result"></div>
+<div class="card" id="output"></div>
 
 <canvas id="chart"></canvas>
 
@@ -92,102 +102,148 @@ button { padding:10px 15px; cursor:pointer; }
 
 let chart;
 
-function num(id){ return Number(document.getElementById(id).value); }
+function n(id){ return Number(document.getElementById(id).value); }
 
-function calc(){
+function run(){
 
-// INITIAL INVESTMENT
-let investment =
-num("land") +
-num("dev") +
-num("breedingCost") +
-num("tradingStock");
+let scenario = Number(document.getElementById("scenario").value);
 
+// =======================
+// CAPITAL
+// =======================
+let fixed =
+n("land") + n("dev") + n("breedCost");
 
-// MONTHLY COST
+// =======================
+// COSTS
+// =======================
 let monthlyCost =
-num("employee") +
-num("petrol") +
-num("feed");
+n("feed") + n("emp") + n("petrol");
 
-
-// TRADING PROFIT
+// =======================
+// TRADING (scenario adjusted)
+// =======================
 let tradeProfit =
-num("tradeCount") * (num("sell") - num("buy"));
+n("tradeCount") *
+((n("sell") - n("buy")) * scenario);
 
+// =======================
+// BREEDING WITH RISK
+// =======================
+let survival = 1 - (n("mortality")/100);
 
-// BREEDING PROFIT (YEARLY → MONTHLY)
 let yearlyKids =
-num("female") * num("kids");
+n("female") * n("kids") * survival;
 
 let breedingRevenue =
-yearlyKids * num("kidPrice");
+yearlyKids * n("kidPrice") * scenario;
 
-let breedingMonthlyProfit =
-(breedingRevenue / 12) * 0.7; // 30% cost factor
+let breedingMonthly =
+breedingRevenue / 12;
 
-
-// TOTAL
+// =======================
+// CASHFLOW
+// =======================
 let monthlyProfit =
-tradeProfit + breedingMonthlyProfit - monthlyCost;
+tradeProfit + breedingMonthly - monthlyCost;
 
 let yearlyProfit = monthlyProfit * 12;
 
-let roi = (yearlyProfit / investment) * 100;
+// =======================
+// VC METRICS
+// =======================
 
-let breakEven = investment / yearlyProfit;
+// ROI
+let roi = (yearlyProfit / fixed) * 100;
 
+// Payback
+let payback = fixed / yearlyProfit;
 
-// COMBINED GROWTH (5 YEARS)
-let data=[];
-let acc=0;
+// Cashflow stability (simplified score)
+let stability =
+((breedingMonthly / monthlyProfit) * 100).toFixed(0);
+
+// =======================
+// 5 YEAR PROJECTION (NAV + RISK)
+// =======================
+let labels=[];
+let nav=[];
+let riskAdjProfit=[];
+
+let value = fixed;
 
 for(let i=1;i<=5;i++){
-acc += yearlyProfit;
-data.push({year:"Year "+i, value:acc});
+
+value += yearlyProfit;
+
+// risk erosion over time
+let riskFactor = 1 - (n("inflation")/100)*i;
+
+labels.push("Year " + i);
+nav.push(value);
+riskAdjProfit.push(yearlyProfit * riskFactor);
 }
 
-
+// =======================
 // OUTPUT
-document.getElementById("result").innerHTML = `
-<h3>📊 Results Breakdown</h3>
+// =======================
+document.getElementById("output").innerHTML = `
 
-<b>💰 Total Investment:</b> ${investment.toLocaleString()} PKR<br><br>
+<h3>📊 VC Summary Dashboard</h3>
 
-<b>📦 Monthly Trading Profit:</b> ${tradeProfit.toLocaleString()} PKR<br>
-<b>🐐 Monthly Breeding Profit:</b> ${Math.round(breedingMonthlyProfit).toLocaleString()} PKR<br>
-<b>📉 Monthly Costs:</b> ${monthlyCost.toLocaleString()} PKR<br>
+<b>🏗 Fixed Capital:</b> ${fixed.toLocaleString()} PKR<br>
 
 <hr>
 
-<h3>🔥 Net Monthly Profit: ${Math.round(monthlyProfit).toLocaleString()} PKR</h3>
-<h3>📅 Yearly Profit: ${Math.round(yearlyProfit).toLocaleString()} PKR</h3>
-<h3>📈 ROI: ${roi.toFixed(2)}%</h3>
-<h3>⏳ Break-even: ${breakEven.toFixed(2)} years</h3>
+<h3>💰 Financial Performance</h3>
+
+Monthly Profit: <b>${Math.round(monthlyProfit).toLocaleString()}</b> PKR<br>
+Yearly Profit: <b>${Math.round(yearlyProfit).toLocaleString()}</b> PKR<br>
+ROI: <b>${roi.toFixed(2)}%</b><br>
+Payback: <b>${payback.toFixed(2)} years</b><br>
 
 <hr>
 
-<h3>🧠 Model View</h3>
-✔ Trading + Breeding Combined Model Active
+<h3>🐐 Business Quality Metrics</h3>
+
+Breeding Contribution: <b>${stability}% of cashflow</b><br>
+Annual Kids Sold: <b>${Math.round(yearlyKids)}</b><br>
+
+<hr>
+
+<h3>⚠️ VC Interpretation</h3>
+
+${roi > 25 ? "🟢 Strong Investment Case" : roi > 15 ? "🟡 Moderate Case" : "🔴 Weak Case"}<br>
+
+${payback < 4 ? "🟢 Fast payback" : "🟡 Slow payback"}<br>
+
 `;
 
+// =======================
 // CHART
+// =======================
 if(chart) chart.destroy();
 
 chart = new Chart(document.getElementById("chart"),{
 type:'line',
 data:{
-labels:data.map(x=>x.year),
-datasets:[{
-label:"Cumulative Profit",
-data:data.map(x=>x.value)
-}]
+labels:labels,
+datasets:[
+{
+label:"Farm NAV (Asset Value)",
+data:nav
+},
+{
+label:"Risk Adjusted Profit",
+data:riskAdjProfit
+}
+]
 }
 });
 
 }
 
-calc();
+run();
 
 </script>
 
