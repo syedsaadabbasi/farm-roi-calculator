@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Goat Farm ROI - Advanced Model</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body { font-family: Arial; margin: 25px; background:#f4f4f4; }
+.container { background:white; padding:20px; border-radius:10px; max-width:1000px; }
+input { width:120px; margin:4px; padding:5px; }
+label { display:inline-block; width:260px; }
+.section { margin-top:20px; padding:10px; background:#eef; border-radius:8px; }
+.card { background:#f9f9f9; padding:15px; margin-top:20px; border-radius:8px; }
+button { padding:10px 15px; cursor:pointer; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🐐 Goat Farm ROI - Trading + Breeding Model</h2>
+
+<div class="section">
+<h3>🏗 Initial Investment</h3>
+
+<label>Land Cost</label>
+<input id="land" value="1200000"><br>
+
+<label>Development Cost</label>
+<input id="dev" value="2000000"><br>
+
+<label>Breeding Goat Cost (25 goats)</label>
+<input id="breedingCost" value="1000000"><br>
+
+<label>Trading Goat Starting Stock Value</label>
+<input id="tradingStock" value="500000"><br>
+</div>
+
+
+<div class="section">
+<h3>💸 Monthly Costs</h3>
+
+<label>Employee Salary</label>
+<input id="employee" value="25000"><br>
+
+<label>Petrol</label>
+<input id="petrol" value="60000"><br>
+
+<label>Feed & Maintenance</label>
+<input id="feed" value="60000"><br>
+</div>
+
+
+<div class="section">
+<h3>📈 Trading Model</h3>
+
+<label>Goats per Month</label>
+<input id="tradeCount" value="20"><br>
+
+<label>Buy Price</label>
+<input id="buy" value="40000"><br>
+
+<label>Sell Price</label>
+<input id="sell" value="50000"><br>
+</div>
+
+
+<div class="section">
+<h3>🐐 Breeding Model</h3>
+
+<label>Breeding Female Goats</label>
+<input id="female" value="25"><br>
+
+<label>Kids per Female / Year</label>
+<input id="kids" value="2"><br>
+
+<label>Kid Selling Price</label>
+<input id="kidPrice" value="30000"><br>
+</div>
+
+<br>
+<button onclick="calc()">Calculate ROI</button>
+
+<div class="card" id="result"></div>
+
+<canvas id="chart"></canvas>
+
+</div>
+
+<script>
+
+let chart;
+
+function num(id){ return Number(document.getElementById(id).value); }
+
+function calc(){
+
+// INITIAL INVESTMENT
+let investment =
+num("land") +
+num("dev") +
+num("breedingCost") +
+num("tradingStock");
+
+
+// MONTHLY COST
+let monthlyCost =
+num("employee") +
+num("petrol") +
+num("feed");
+
+
+// TRADING PROFIT
+let tradeProfit =
+num("tradeCount") * (num("sell") - num("buy"));
+
+
+// BREEDING PROFIT (YEARLY → MONTHLY)
+let yearlyKids =
+num("female") * num("kids");
+
+let breedingRevenue =
+yearlyKids * num("kidPrice");
+
+let breedingMonthlyProfit =
+(breedingRevenue / 12) * 0.7; // 30% cost factor
+
+
+// TOTAL
+let monthlyProfit =
+tradeProfit + breedingMonthlyProfit - monthlyCost;
+
+let yearlyProfit = monthlyProfit * 12;
+
+let roi = (yearlyProfit / investment) * 100;
+
+let breakEven = investment / yearlyProfit;
+
+
+// COMBINED GROWTH (5 YEARS)
+let data=[];
+let acc=0;
+
+for(let i=1;i<=5;i++){
+acc += yearlyProfit;
+data.push({year:"Year "+i, value:acc});
+}
+
+
+// OUTPUT
+document.getElementById("result").innerHTML = `
+<h3>📊 Results Breakdown</h3>
+
+<b>💰 Total Investment:</b> ${investment.toLocaleString()} PKR<br><br>
+
+<b>📦 Monthly Trading Profit:</b> ${tradeProfit.toLocaleString()} PKR<br>
+<b>🐐 Monthly Breeding Profit:</b> ${Math.round(breedingMonthlyProfit).toLocaleString()} PKR<br>
+<b>📉 Monthly Costs:</b> ${monthlyCost.toLocaleString()} PKR<br>
+
+<hr>
+
+<h3>🔥 Net Monthly Profit: ${Math.round(monthlyProfit).toLocaleString()} PKR</h3>
+<h3>📅 Yearly Profit: ${Math.round(yearlyProfit).toLocaleString()} PKR</h3>
+<h3>📈 ROI: ${roi.toFixed(2)}%</h3>
+<h3>⏳ Break-even: ${breakEven.toFixed(2)} years</h3>
+
+<hr>
+
+<h3>🧠 Model View</h3>
+✔ Trading + Breeding Combined Model Active
+`;
+
+// CHART
+if(chart) chart.destroy();
+
+chart = new Chart(document.getElementById("chart"),{
+type:'line',
+data:{
+labels:data.map(x=>x.year),
+datasets:[{
+label:"Cumulative Profit",
+data:data.map(x=>x.value)
+}]
+}
+});
+
+}
+
+calc();
+
+</script>
+
+</body>
+</html>
